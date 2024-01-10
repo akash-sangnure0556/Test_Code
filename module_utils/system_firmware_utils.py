@@ -6,6 +6,7 @@
 from __future__ import absolute_import, division, print_function
 import os
 __metaclass__ = type
+#import pandas as pd
 import json
 import subprocess
 import time 
@@ -13,6 +14,7 @@ from requests_toolbelt import MultipartEncoder
 from ansible_collections.community.general.plugins.module_utils.redfish_utils import RedfishUtils
 from ansible.module_utils.urls import open_url, prepare_multipart
 from ansible.module_utils.six.moves.urllib.error import URLError, HTTPError
+import configparser
 
 supported_models=["HPE CRAY XD220V", "HPE CRAY XD225V", "HPE CRAY XD295V", "HPE CRAY XD665", "HPE CRAY XD670"]
 
@@ -50,6 +52,7 @@ routing = {
     "HPE CRAY XD295V": "0x34 0xa2 0x00 0x19 0xA9", 
     "HPE CRAY XD665": "0x34 0xA2 0x00 0x19 0xa9 0x00"
 }
+#config = configparser.ConfigParser()
 
 class CrayRedfishUtils(RedfishUtils):
     def post_multi_request(self, uri, headers, payload):
@@ -124,8 +127,17 @@ class CrayRedfishUtils(RedfishUtils):
         time.sleep(120)
 
     def get_PS_CrayXD670(self,attr):
+        ini_path = os.path.join(os.getcwd(),'config.ini')
+        config = configparser.ConfigParser()
         IP = attr.get('baseuri')
-        option = attr.get('power_state')
+        config.read(ini_path)
+        try:
+            option = config.get('Options','power_state')
+            if option=="":
+                return {'ret': False, 'changed': True, 'msg': 'Must specify the required option for power_state in config.ini'}
+        except:
+            return {'ret': False, 'changed': True, 'msg': 'Must specify the required option for power_state in config.ini'}
+
         csv_file_name = attr.get('output_file_name')
         if not os.path.exists(csv_file_name):
             f = open(csv_file_name, "w")
@@ -148,7 +160,7 @@ class CrayRedfishUtils(RedfishUtils):
                 power_state = self.power_state()
                 lis=[IP,model,power_state]
             else:
-                return {'ret': False, 'changed': True, 'msg': 'Must specify the correct required option for power_state'}
+                return {'ret': False, 'changed': True, 'msg': 'Must specify the correct required option for power_state in config.ini'}
         
         else:
             lis=[IP,model,"unsupported_model"]
@@ -195,6 +207,8 @@ class CrayRedfishUtils(RedfishUtils):
 
     def get_sys_fw_inventory(self,attr):
         IP = attr.get('baseuri')
+        # username = attr.get('username')
+        # password = attr.get('password')
         csv_file_name = attr.get('output_file_name')
         if not os.path.exists(csv_file_name):      
             f = open(csv_file_name, "w")
@@ -293,27 +307,36 @@ class CrayRedfishUtils(RedfishUtils):
             else:
                 return update_status
            
-    def system_fw_update(self, attr):      
+    def system_fw_update(self, attr):
+        ini_path = os.path.join(os.getcwd(),'config.ini')
+        config = configparser.ConfigParser()
+        config.read(ini_path)
+        key = ""
+        try:
+            target = config.get('Target','update_target')
+            image_path_inputs = {
+                "HPE CRAY XD220V": config.get('Image', 'update_image_path_xd220V'),
+                "HPE CRAY XD225V": config.get('Image', 'update_image_path_xd225V'),
+                "HPE CRAY XD295V": config.get('Image', 'update_image_path_xd295V'),
+                "HPE CRAY XD665": config.get('Image', 'update_image_path_xd665'),
+                "HPE CRAY XD670": config.get('Image', 'update_image_path_xd670')}
+        except:
+            pass
+
+        ## have a check that atleast one image path set based out of the above new logic
+        if not any(image_path_inputs.values()):
+            return {'ret': False, 'changed': True, 'msg': 'Must specify atleast one update_image_path'}
+        
         IP = attr.get('baseuri')
         username = attr.get('username')
         password = attr.get('password')
         image_type = attr.get('update_image_type')
         update_status = "Success"
         is_target_supported=False
+        # before_version="NA"
+        # after_version="NA"
         image_path="NA"
-        target = attr.get('update_target')
-        image_path_inputs = {
-                "HPE CRAY XD220V": attr.get('Image', 'update_image_path_xd220V'),
-                "HPE CRAY XD225V": attr.get('Image', 'update_image_path_xd225V'),
-                "HPE CRAY XD295V": attr.get('Image', 'update_image_path_xd295V'),
-                "HPE CRAY XD665": attr.get('Image', 'update_image_path_xd665'),
-                "HPE CRAY XD670": attr.get('Image', 'update_image_path_xd670')}
         csv_file_name = attr.get('output_file_name')
-
-        ## have a check that atleast one image path set based out of the above new logic
-        if not any(image_path_inputs.values()):
-            return {'ret': False, 'changed': True, 'msg': 'Must specify atleast one update_image_path'}
- 
 
         if target=="" or target.upper() in unsupported_targets:
             return {'ret': False, 'changed': True, 'msg': 'Must specify the correct target for firmware update'}   
