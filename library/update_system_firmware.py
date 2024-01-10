@@ -7,95 +7,9 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-DOCUMENTATION = '''
----
-module: update_system_firmware
-short_description: Updates CrayXD components using Redfish APIs
-version_added: #6.6.0
-description:
-  - Builds Redfish URIs locally and sends them to remote OOB controllers to
-    perform an action.
-attributes:
-  check_mode:
-    support: none
-  diff_mode:
-    support: none
-extends_documentation_fragment:
-  - community.general.attributes
-options:
-  category:
-    required: true
-    description:
-      - Category to Update the components of CrayXD.
-    type: str
-    choices: ['Update']
-  command:
-    required: true
-    description:
-      - List of commands to execute on the CrayXD.
-    type: list
-    elements: str
-  baseuri:
-    required: true
-    description:
-      - Base URI of OOB controller.
-    type: str
-  username:
-    required: false
-    description:
-      - Username for authenticating to CrayXD.
-    type: str
-  password:
-    required: false
-    description:
-      - Password for authenticating to CrayXD.
-    type: str
-  auth_token:  #confirm this
-    required: false
-    description:
-      - Security token for authenticating to CratXD.
-    type: str
-  timeout:
-    required: false
-    description:
-      - Timeout in seconds for HTTP requests to CrayXD.
-    default: 60
-    type: int
-author:
-  - ##Varni H P (@varini-hp)
-'''
-
-EXAMPLES = '''
-    - name: Running Firmware Update for Cray XD Servers
-      update_system_firmware:
-        category: Update
-        command: SystemFirmwareUpdate
-        baseuri: "{{ baseuri }}"
-        username: "{{ bmc_username }}"
-        password: "{{ bmc_password }}"
-'''
-
-RETURN = '''
-update_system_firmware:
-    description: Update the components of the CrayXD.
-    type: dict
-    contains:
-        update_system_firmware
-            description: Updates the CrayXD components using Redfish API's.
-            type: dict
-            contains:
-                ret:
-                    description: Return True/False based on whether the operation was performed successfully.
-                    type: bool
-                msg:
-                    description: Status of the operation performed on the iLO.
-                    type: str
-    returned: always
-'''
-
-
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.system_firmware_utils import CrayRedfishUtils
+#from ansible_collections.community.general.plugins.module_utils.cray_redfish_utils import CrayRedfishUtils
 from ansible.module_utils.common.text.converters import to_native
 
 
@@ -116,16 +30,10 @@ def main():
             password=dict(no_log=True),
             auth_token=dict(no_log=True),
             session_uri=dict(),
-            timeout=dict(type='int', default=60),
+            timeout=dict(type='int', default=600),
             update_image_type = dict(type='str', default='HPM'),
             resource_id=dict(type='list',elements='str',default=[],required=False),
-            update_target=dict(),
-            power_state=dict(),
-            update_image_path_xd220v=dict(type='str', default=''),
-            update_image_path_xd225v=dict(type='str', default=''),
-            update_image_path_xd295v=dict(type='str', default=''),
-            update_image_path_xd665=dict(type='str', default=''),
-            update_image_path_xd670=dict(type='str', default=''),
+            update_handle=dict(),
             output_file_name=dict(type='str', default=''),
         ),
         supports_check_mode=False
@@ -164,14 +72,9 @@ def main():
                 'baseuri': module.params['baseuri'],
                 'username': module.params['username'],
                 'password': module.params['password'],
+                'update_handle': module.params['update_handle'],
+                'resource_id': module.params['resource_id'],
                 'update_image_type' : module.params['update_image_type'],
-                'update_target' : module.params['update_target'],
-                'power_state' : module.params['power_state'],
-                'update_image_path_xd220v' : module.params['update_image_path_xd220v'],
-                'update_image_path_xd225v' : module.params['update_image_path_xd225v'],
-                'update_image_path_xd295v' : module.params['update_image_path_xd295v'],
-                'update_image_path_xd665' : module.params['update_image_path_xd665'],
-                'update_image_path_xd670' : module.params['update_image_path_xd670'],
                 'output_file_name': module.params['output_file_name'],
                 })
                 if result['ret']:
