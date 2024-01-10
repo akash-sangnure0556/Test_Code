@@ -9,6 +9,7 @@ __metaclass__ = type
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.system_firmware_utils import CrayRedfishUtils
+#from ansible_collections.community.general.plugins.module_utils.cray_redfish_utils import CrayRedfishUtils
 from ansible.module_utils.common.text.converters import to_native
 
 # More will be added as module features are expanded
@@ -31,7 +32,6 @@ def main():
             timeout=dict(type='int', default=600),
             resource_id=dict(type='list',elements='str',default=[],required=False),
             update_handle=dict(),
-            power_state=dict(),
             output_file_name=dict(type='str', default=''),
         ),
         supports_check_mode=False
@@ -69,7 +69,6 @@ def main():
                       'baseuri': module.params['baseuri'],
                       'username': module.params['username'],
                       'password': module.params['password'],
-                      'power_state' : module.params['power_state'],
                       'output_file_name': module.params['output_file_name'],
                       })
                 if result['ret']:
